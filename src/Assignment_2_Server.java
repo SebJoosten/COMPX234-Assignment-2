@@ -30,28 +30,31 @@ public class Assignment_2_Server {
         // Try and convert the input argument to int
         try {
             port = Integer.parseInt(args[0]);
-            System.out.println("Port: " + port + " OK ");
+            System.out.println("Main Server -> Port: " + port + " OK ");
 
         } catch (NumberFormatException e) {
-            System.out.println("Server port input invalid integer");
+            System.out.println("Main Server -> port input invalid integer");
             System.out.println(e.toString());
         }
 
         // Initial connection block with time out
         boolean listening = true;
         while (listening) {
+
             try {
+
                 // Set up the server instance and listen on port
                 ServerSocket ss = new ServerSocket(port);
                 ss.setSoTimeout(timeOut);
 
                 // While communicating
                 while (true) {
+                    System.out.println("Main Server -> Listening on port " + port);
                     try {
 
                         // Listen for connection
                         Socket s = ss.accept();
-                        System.out.println("Client connected: " + s.getInetAddress());
+                        System.out.println("Main Server -> Client connected: " + s.getInetAddress());
 
                         // Pass socket to a thread and start
                         clientConnection handler = new clientConnection(s.getInetAddress().toString(), s);
@@ -59,19 +62,17 @@ public class Assignment_2_Server {
 
                     // Catch for time out currently just set to retry
                     } catch (SocketTimeoutException e) {
-                        System.out.println("Main Server timeout");
-                        System.out.println("Retry on port: " + port);
+                        System.out.println("Main Server -> Socket timeout: " + port);
                     // Catch socket IO errors
                     } catch (IOException e) {
-                        System.out.println("Server IO exception: "+ e.toString());
+                        System.out.println("Main Server -> IO exception: "+ e.getMessage());
                     }
 
                 }
 
             // Catch for ALL OTHER FAILURES
             } catch (IOException e) {
-                System.err.println("Server: Failed to connect " + e.getMessage());
-                System.out.println("Retrying server setup...");
+                System.err.println("Main Server -> general socket failure" + e.getMessage() + " Retry on port: " + port);
             }
 
         } // Server listen loop
@@ -93,14 +94,14 @@ public class Assignment_2_Server {
          * @param clientConnect The socket you've established a connection on
          */
         public clientConnection(String id, Socket clientConnect) {
-            this.id = "Client Connection thread: " + id;
+            this.id = "Sub Connection " + id + " -> ";
             this.clientConnect = clientConnect;
         }
 
         // The thread itself
         @Override
         public void run() {
-            System.out.println(id + " running");
+            System.out.println(id + "running");
 
             // While communicating "running" when communication stops or faults it just drops it
             boolean running = true;
@@ -128,14 +129,14 @@ public class Assignment_2_Server {
 
                             // Check for close call and break
                             if (in.trim().equals("CLOSE")) {
-                                System.out.println("Server closed");
+                                System.out.println(id + "Closing connection");
                                 running = false;
                                 break;
                             }
 
                             // print input and echo
-                            System.out.println(" server gets " + in);
-                            write.println("You Said: " + in);
+                            System.out.println(id + "gets " + in);
+                            write.println(id + "Said: " + in);
 
                             // Communication successful reset retry count
                             threadRetries = 0;
@@ -143,8 +144,7 @@ public class Assignment_2_Server {
 
                         // Catch for time out currently just set to retry
                     } catch (SocketTimeoutException e) {
-                        System.out.println("Server timeout");
-                        System.out.println("Retry on port " + id);
+                        System.out.println(id + "Timeout retry: " + threadRetries);
                         threadRetries++;
                     }
 
@@ -154,11 +154,12 @@ public class Assignment_2_Server {
                 write.close();
                 read.close();
                 clientConnect.close();
+                System.out.println(id + "CLOSED");
 
             }
+            // Catch socket IO errors
             catch (IOException e) {
-                // Catches but then waits for timeout
-                System.out.println("Sub Server IO exception: " + e.toString());
+                System.out.println(id + "IO exception: " + e.toString());
                 running = false;
             }
 
