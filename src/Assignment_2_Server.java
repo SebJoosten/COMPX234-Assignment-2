@@ -7,13 +7,13 @@ import java.util.Objects;
 // this is the basic hello world Implementation from class
 public class Assignment_2_Server {
 
-    private static final int timeOut = 10000;
+    // The timeout interval for connection failure
+    private static final int timeOut = 2000;
+    // A list of connected threads
     private static List<Thread> clientConnections = new ArrayList<>();
 
 
     public static void main(String[] args) {
-
-
 
         // Get the initialization port This way it can be changed easily
         // int port = 51234;
@@ -27,117 +27,110 @@ public class Assignment_2_Server {
             return;
         }
         // Try and convert the input argument to int
-        try{
+        try {
             port = Integer.parseInt(args[0]);
             System.out.println("Port: " + port + " OK ");
 
-        } catch (NumberFormatException e){
+        } catch (NumberFormatException e) {
             System.out.println("Server port input invalid integer");
             System.out.println(e.toString());
         }
 
         // Initial connection block with time out
-        // This will set up connections then find a free socked and move it to a new connection with that socket
+        while (true) {
+            try {
+                // Set up the server instance and listen on port
+                ServerSocket ss = new ServerSocket(port);
+                ss.setSoTimeout(timeOut);
+                boolean running = true;
 
-        try {
-            // Listen on "port" for incoming connections
-            // Set up the server instance
-            ServerSocket ss = new ServerSocket(port);
-            // Set the time-out for the retry loop
-            ss.setSoTimeout(timeOut);
-            boolean running = true;
+                // While communicating
+                while (running) {
 
-            // While communicating
-            while (running) {
+                    try {
+                        // Accept incoming client connection
+                        Socket s = ss.accept();
 
-                try {
-                    // Accept incoming client connection
-                    Socket s = ss.accept();
+                        // Set up read and write buffer
+                        BufferedReader read = new BufferedReader(
+                                new InputStreamReader(s.getInputStream())
+                        );
+                        PrintWriter write = new PrintWriter(
+                                s.getOutputStream(), true
+                        );
 
-                    // Set up input buffer called read > make a stream reader to convert byte to text
-                    // set up input stream from s
-                    BufferedReader read = new BufferedReader(
-                            new InputStreamReader(s.getInputStream())
-                    );
+                        // Make a string used for reading in and checking data
+                        String in;
+                        while ((in = read.readLine()) != null) {
 
-                    // Send output to client
-                    PrintWriter write = new PrintWriter(
-                            s.getOutputStream(), true // autoFlush = true
-                    );
-
-                    // ***** This is where the data is actually send and received *****
-                    // This will only send data once and echo
-
-                    // Set up input string
-                    String in;
-
-                    // While there is data coming in keep printing it
-                    while ((in = read.readLine()) != null) {
-
-                        // Check for close call and break
-                        if (in.trim().equals("CLOSE")) {
-                            System.out.println("Server closed");
-                            running = false;
-                            break;
-                        }
-
-                        if (in.trim().equals("NEWPORT")) {
-                            System.out.println("Server: Move to new port");
-
-                            // Get new free port
-                            ServerSocket newServer = new ServerSocket(0);
-                            int newPort = newServer.getLocalPort();
-
-                            // Send port and wait for echo
-                            write.println("NEWPORT," + newPort);
-                            in = read.readLine();
-                            String[] split = in.split(",");
-
-                            if (split.length != 2) {
-                                System.out.println("Server: Wrong port echo");
+                            // Check for close call and break
+                            if (in.trim().equals("CLOSE")) {
+                                System.out.println("Server closed");
+                                running = false;
                                 break;
                             }
 
-                            if (split[0].trim().equals("NEWPORT")) {
-                                if (Integer.parseInt(split[1]) == newPort) {
+                            // if client is ready call for new port allocation
+                            if (in.trim().equals("NEWPORT")) {
+
+                                // Get new available port
+                                System.out.println("Server: Move to new port");
+                                ServerSocket newServer = new ServerSocket(0);
+                                int newPort = newServer.getLocalPort();
+
+                                // Send port and wait for echo
+                                write.println("NEWPORT," + newPort);
+                                in = read.readLine();
+                                String[] split = in.split(",");
+
+                                // Check echo and assign thread
+                                if (split.length == 2 &&
+                                        (split[0].trim().equals("NEWPORT")) &&
+                                        Integer.parseInt(split[1]) == newPort) {
                                     System.out.println("Server: New port found");
                                     System.out.println("Server: Move to new port" + newPort);
-
                                     clientConnection c = new clientConnection(newPort, newServer);
                                     clientConnections.add(c);
                                     c.start();
+
+                                } else {
+                                    System.out.println("Server: New port not found");
+                                    break;
+
                                 }
+
                             }
+
+                            // print input and echo
+                            System.out.println(" server gets " + in);
+                            write.println("You Said: " + in);
+
                         }
 
-                        // print input and echo
-                        System.out.println(" server gets " + in);
-                        write.println("You Said: " + in);
+                        // kill writer, reader and close connection
+                        write.close();
+                        read.close();
+                        s.close();
+
+                        // Catch for time out currently just set to retry
+                    } catch (SocketTimeoutException e) {
+                        System.out.println("Server timeout");
+                        System.out.println("Retry on port " + port);
+                    } catch (IOException e) {
+                        // Catches but then waits for timeout
+                        System.out.println("Server exception");
                     }
 
-                    // find a new free port and send it to the client
-
-
-
-                    // kill writer, reader and close connection
-                    write.close();
-                    read.close();
-                    s.close();
-
-                // Catch for time out currently just set to retry
-                }catch (SocketTimeoutException e){
-                    System.out.println("Server timeout");
-                    System.out.println("Retry on port " + port  );
                 }
+
+                // Catch for server set up failure
+            } catch (IOException e) {
+                System.err.println("Server: Failed to connect " + e.getMessage());
+                System.out.println("Retrying server setup...");
             }
-
-        // Catch for if the socket fails
-        } catch (Exception e) {
-            System.err.println(e.toString());
         }
-
-
     }
+
 
 
 
