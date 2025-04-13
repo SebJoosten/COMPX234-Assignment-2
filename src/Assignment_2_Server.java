@@ -1,12 +1,19 @@
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 // this is the basic hello world Implementation from class
 public class Assignment_2_Server {
 
     private static final int timeOut = 10000;
+    private static List<Thread> clientConnections = new ArrayList<>();
+
 
     public static void main(String[] args) {
+
+
 
         // Get the initialization port This way it can be changed easily
         // int port = 51234;
@@ -74,10 +81,43 @@ public class Assignment_2_Server {
                             break;
                         }
 
+                        if (in.trim().equals("NEWPORT")) {
+                            System.out.println("Server: Move to new port");
+
+                            // Get new free port
+                            ServerSocket newServer = new ServerSocket(0);
+                            int newPort = newServer.getLocalPort();
+
+                            // Send port and wait for echo
+                            write.println("NEWPORT," + newPort);
+                            in = read.readLine();
+                            String[] split = in.split(",");
+
+                            if (split.length != 2) {
+                                System.out.println("Server: Wrong port echo");
+                                break;
+                            }
+
+                            if (split[0].trim().equals("NEWPORT")) {
+                                if (Integer.parseInt(split[1]) == newPort) {
+                                    System.out.println("Server: New port found");
+                                    System.out.println("Server: Move to new port" + newPort);
+
+                                    clientConnection c = new clientConnection(newPort, newServer);
+                                    clientConnections.add(c);
+                                    c.start();
+                                }
+                            }
+                        }
+
                         // print input and echo
                         System.out.println(" server gets " + in);
                         write.println("You Said: " + in);
                     }
+
+                    // find a new free port and send it to the client
+
+
 
                     // kill writer, reader and close connection
                     write.close();
@@ -98,4 +138,65 @@ public class Assignment_2_Server {
 
 
     }
+
+
+
+    // New receive thread
+    public static class clientConnection extends Thread {
+        private int port;
+        private String id;
+        private ServerSocket clientConnect;
+
+        // Set up new thread with thread connection
+        public clientConnection(int number, ServerSocket clientConnect) {
+            this.port = number;
+            this.id = "Server thread " + Integer.toString(number);
+            this.clientConnect = clientConnect;
+        }
+
+        @Override
+        public void run() {
+            System.out.println(id + " starting");
+
+            try {
+                // Accept connection on new port
+                Socket newSocket = clientConnect.accept();
+                System.out.println("Server: Client connected on new port");
+
+                // Set up new read and write
+                BufferedReader read = new BufferedReader(
+                        new InputStreamReader(newSocket.getInputStream())
+                );
+
+                PrintWriter write = new PrintWriter(
+                        newSocket.getOutputStream(), true
+                );
+
+                // Same loop as before but on new thread
+                String in;
+
+                // Read and respond with echo
+                while ((in = read.readLine()) != null) {
+                    if (in.trim().equals("CLOSE")) {
+                        System.out.println("Server closed");
+                        break;
+                    }
+
+                    System.out.println(id + " received: " + in);
+                    write.println("Echo: " + in);
+                }
+
+                // Close sockets
+                newSocket.close();
+                clientConnect.close();
+                System.out.println(id + " finished");
+
+            } catch (Exception e) {
+                System.out.println(id + " error: " + e);
+            }
+        }
+
+
+    }
+
 }

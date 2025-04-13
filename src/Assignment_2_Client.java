@@ -65,6 +65,11 @@ public class Assignment_2_Client {
                 // Print the line
                 System.out.println("server sent: \"" + line + "\"");
 
+                //******************************************** test stuff ********************************************
+                writer.println("NEWPORT");
+                String[] split = line.split(",");
+                writer.println("NEWPORT" + split[1]);
+
             }
 
             //
@@ -80,5 +85,16 @@ public class Assignment_2_Client {
         }
 
 
+
     }
+
+
+    // This is to change to a new port
+    public void getNewPort(){
+
+
+    }
+
+
+
 }
