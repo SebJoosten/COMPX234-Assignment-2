@@ -45,15 +45,31 @@ public class Assignment_2_Client {
 
         try {
 
+
             // Send something g
             Socket sock = new Socket(ia, port);
             PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
+            BufferedReader read = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+
             writer.println(args[0]);
 
             // Receive something
-            BufferedReader read = new BufferedReader(new InputStreamReader(sock.getInputStream()));
             String line = read.readLine();
             System.out.println("server sent: \"" + line + "\"");
+
+            for(int i = 0 ; i < 10 ; i++) {
+                writer.println("This is message " + i);
+
+                // Receive something
+                line = read.readLine();
+                // Print the line
+                System.out.println("server sent: \"" + line + "\"");
+
+            }
+
+            //
+            writer.println("something");
+            writer.println("CLOSE");
 
             // Close connection
             sock.close();

@@ -3,6 +3,9 @@ import java.net.*;
 
 // this is the basic hello world Implementation from class
 public class Assignment_2_Server {
+
+    private static final int timeOut = 10000;
+
     public static void main(String[] args) {
 
         // Get the initialization port This way it can be changed easily
@@ -26,48 +29,72 @@ public class Assignment_2_Server {
             System.out.println(e.toString());
         }
 
-        // *********** HELLO WORLD TEST FROM CLASS ***********
+        // Initial connection block with time out
+        // This will set up connections then find a free socked and move it to a new connection with that socket
 
         try {
             // Listen on "port" for incoming connections
             // Set up the server instance
             ServerSocket ss = new ServerSocket(port);
+            // Set the time-out for the retry loop
+            ss.setSoTimeout(timeOut);
+            boolean running = true;
 
             // While communicating
-            while (true) {
-                // Accept incoming client connection
-                Socket s = ss.accept();
+            while (running) {
 
-                // Set up input buffer called read > make a stream reader to convert byte to text
-                // set up input stream from s
-                BufferedReader read = new BufferedReader(
-                        new InputStreamReader(s.getInputStream())
-                );
+                try {
+                    // Accept incoming client connection
+                    Socket s = ss.accept();
 
-                // Send output to client
-                PrintWriter write = new PrintWriter(
-                        s.getOutputStream(), true // autoFlush = true
-                );
+                    // Set up input buffer called read > make a stream reader to convert byte to text
+                    // set up input stream from s
+                    BufferedReader read = new BufferedReader(
+                            new InputStreamReader(s.getInputStream())
+                    );
 
-                // ***** This is where the data is actually send and received *****
-                // This will only send data once and echo
+                    // Send output to client
+                    PrintWriter write = new PrintWriter(
+                            s.getOutputStream(), true // autoFlush = true
+                    );
 
-                // Read in a line
-                String in = read.readLine();
+                    // ***** This is where the data is actually send and received *****
+                    // This will only send data once and echo
 
-                // write out a line
-                write.println("You Said: " + in);
+                    // Set up input string
+                    String in;
 
-                // Close client connection
-                s.close();
+                    // While there is data coming in keep printing it
+                    while ((in = read.readLine()) != null) {
 
+                        // Check for close call and break
+                        if (in.trim().equals("CLOSE")) {
+                            System.out.println("Server closed");
+                            running = false;
+                            break;
+                        }
+
+                        // print input and echo
+                        System.out.println(" server gets " + in);
+                        write.println("You Said: " + in);
+                    }
+
+                    // kill writer, reader and close connection
+                    write.close();
+                    read.close();
+                    s.close();
+
+                // Catch for time out currently just set to retry
+                }catch (SocketTimeoutException e){
+                    System.out.println("Server timeout");
+                    System.out.println("Retry on port " + port  );
+                }
             }
+
+        // Catch for if the socket fails
         } catch (Exception e) {
-            System.err.println(e);
+            System.err.println(e.toString());
         }
-
-        // *********** END HELLO WORLD TEST ***********
-
 
 
     }
