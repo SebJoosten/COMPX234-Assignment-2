@@ -45,7 +45,6 @@ public class Assignment_2_Client {
 
         try {
 
-
             // Send something g
             Socket sock = new Socket(ia, port);
             PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
@@ -65,19 +64,13 @@ public class Assignment_2_Client {
                 // Print the line
                 System.out.println("server sent: \"" + line + "\"");
 
-                //******************************************** test stuff ********************************************
-                writer.println("NEWPORT");
-                String[] split = line.split(",");
-                writer.println("NEWPORT" + split[1]);
-
             }
 
-            //
-            writer.println("something");
-            writer.println("CLOSE");
+            while(true){}
+            //writer.println("CLOSE");
 
             // Close connection
-            sock.close();
+            //sock.close();
 
 
         } catch (IOException e) {

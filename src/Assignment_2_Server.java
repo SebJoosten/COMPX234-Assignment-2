@@ -2,13 +2,14 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 // this is the basic hello world Implementation from class
 public class Assignment_2_Server {
 
     // The timeout interval for connection failure
     private static final int timeOut = 2000;
+    // The number of retries before a thread closes the connection
+    private static final int retries = 10;
     // A list of connected threads
     private static List<Thread> clientConnections = new ArrayList<>();
 
@@ -37,27 +38,89 @@ public class Assignment_2_Server {
         }
 
         // Initial connection block with time out
-        while (true) {
+        boolean listening = true;
+        while (listening) {
             try {
                 // Set up the server instance and listen on port
                 ServerSocket ss = new ServerSocket(port);
                 ss.setSoTimeout(timeOut);
-                boolean running = true;
 
                 // While communicating
-                while (running) {
-
+                while (true) {
                     try {
-                        // Accept incoming client connection
-                        Socket s = ss.accept();
 
-                        // Set up read and write buffer
-                        BufferedReader read = new BufferedReader(
-                                new InputStreamReader(s.getInputStream())
-                        );
-                        PrintWriter write = new PrintWriter(
-                                s.getOutputStream(), true
-                        );
+                        // Listen for connection
+                        Socket s = ss.accept();
+                        System.out.println("Client connected: " + s.getInetAddress());
+
+                        // Pass socket to a thread and start
+                        clientConnection handler = new clientConnection(s.getInetAddress().toString(), s);
+                        new Thread(handler).start();
+
+                    // Catch for time out currently just set to retry
+                    } catch (SocketTimeoutException e) {
+                        System.out.println("Main Server timeout");
+                        System.out.println("Retry on port: " + port);
+                    // Catch socket IO errors
+                    } catch (IOException e) {
+                        System.out.println("Server IO exception: "+ e.toString());
+                    }
+
+                }
+
+            // Catch for ALL OTHER FAILURES
+            } catch (IOException e) {
+                System.err.println("Server: Failed to connect " + e.getMessage());
+                System.out.println("Retrying server setup...");
+            }
+
+        } // Server listen loop
+
+    }
+
+
+    /**
+     * New thread for client connection
+     * This thread is passed the socked of the communication then terminates when the socket is closed or faults
+     */
+    public static class clientConnection extends Thread {
+        private String id;
+        private Socket clientConnect;
+
+        /**
+         * Pass an established socket connection to this thread to keep communicating
+         * @param id The id for this thread
+         * @param clientConnect The socket you've established a connection on
+         */
+        public clientConnection(String id, Socket clientConnect) {
+            this.id = "Client Connection thread: " + id;
+            this.clientConnect = clientConnect;
+        }
+
+        // The thread itself
+        @Override
+        public void run() {
+            System.out.println(id + " running");
+
+            // While communicating "running" when communication stops or faults it just drops it
+            boolean running = true;
+            int threadRetries = 0;
+
+            try {   // IO catch
+
+                // Set up read and write buffer and timeout
+                clientConnect.setSoTimeout(timeOut);
+                BufferedReader read = new BufferedReader(
+                        new InputStreamReader(clientConnect.getInputStream())
+                );
+                PrintWriter write = new PrintWriter(
+                        clientConnect.getOutputStream(), true
+                );
+
+                // While running and retry counter is still under allotted amount
+                while (running && threadRetries < retries) {
+
+                    try {   // Timeout catch
 
                         // Make a string used for reading in and checking data
                         String in;
@@ -70,126 +133,36 @@ public class Assignment_2_Server {
                                 break;
                             }
 
-                            // if client is ready call for new port allocation
-                            if (in.trim().equals("NEWPORT")) {
-
-                                // Get new available port
-                                System.out.println("Server: Move to new port");
-                                ServerSocket newServer = new ServerSocket(0);
-                                int newPort = newServer.getLocalPort();
-
-                                // Send port and wait for echo
-                                write.println("NEWPORT," + newPort);
-                                in = read.readLine();
-                                String[] split = in.split(",");
-
-                                // Check echo and assign thread
-                                if (split.length == 2 &&
-                                        (split[0].trim().equals("NEWPORT")) &&
-                                        Integer.parseInt(split[1]) == newPort) {
-                                    System.out.println("Server: New port found");
-                                    System.out.println("Server: Move to new port" + newPort);
-                                    clientConnection c = new clientConnection(newPort, newServer);
-                                    clientConnections.add(c);
-                                    c.start();
-
-                                } else {
-                                    System.out.println("Server: New port not found");
-                                    break;
-
-                                }
-
-                            }
-
                             // print input and echo
                             System.out.println(" server gets " + in);
                             write.println("You Said: " + in);
 
+                            // Communication successful reset retry count
+                            threadRetries = 0;
                         }
-
-                        // kill writer, reader and close connection
-                        write.close();
-                        read.close();
-                        s.close();
 
                         // Catch for time out currently just set to retry
                     } catch (SocketTimeoutException e) {
                         System.out.println("Server timeout");
-                        System.out.println("Retry on port " + port);
-                    } catch (IOException e) {
-                        // Catches but then waits for timeout
-                        System.out.println("Server exception");
+                        System.out.println("Retry on port " + id);
+                        threadRetries++;
                     }
 
                 }
 
-                // Catch for server set up failure
-            } catch (IOException e) {
-                System.err.println("Server: Failed to connect " + e.getMessage());
-                System.out.println("Retrying server setup...");
-            }
-        }
-    }
-
-
-
-
-    // New receive thread
-    public static class clientConnection extends Thread {
-        private int port;
-        private String id;
-        private ServerSocket clientConnect;
-
-        // Set up new thread with thread connection
-        public clientConnection(int number, ServerSocket clientConnect) {
-            this.port = number;
-            this.id = "Server thread " + Integer.toString(number);
-            this.clientConnect = clientConnect;
-        }
-
-        @Override
-        public void run() {
-            System.out.println(id + " starting");
-
-            try {
-                // Accept connection on new port
-                Socket newSocket = clientConnect.accept();
-                System.out.println("Server: Client connected on new port");
-
-                // Set up new read and write
-                BufferedReader read = new BufferedReader(
-                        new InputStreamReader(newSocket.getInputStream())
-                );
-
-                PrintWriter write = new PrintWriter(
-                        newSocket.getOutputStream(), true
-                );
-
-                // Same loop as before but on new thread
-                String in;
-
-                // Read and respond with echo
-                while ((in = read.readLine()) != null) {
-                    if (in.trim().equals("CLOSE")) {
-                        System.out.println("Server closed");
-                        break;
-                    }
-
-                    System.out.println(id + " received: " + in);
-                    write.println("Echo: " + in);
-                }
-
-                // Close sockets
-                newSocket.close();
+                // kill writer, reader and close connection
+                write.close();
+                read.close();
                 clientConnect.close();
-                System.out.println(id + " finished");
 
-            } catch (Exception e) {
-                System.out.println(id + " error: " + e);
             }
+            catch (IOException e) {
+                // Catches but then waits for timeout
+                System.out.println("Sub Server IO exception: " + e.toString());
+                running = false;
+            }
+
         }
 
-
-    }
-
+    } // **** Thread end ****
 }
