@@ -140,11 +140,25 @@ public class Assignment_2_Server {
                                 break;
                             }
 
+
+                            String[] inPut = in.split(" ");
+                            int checkSum = 0;
+
                             // print input and echo
-                            System.out.println(id + "gets " + in);
-                            write.println(id + "Said: " + in);
+                            try{
+                                checkSum = Integer.parseInt(inPut[0]);
+                                if (in.length() != checkSum) {
+                                    throw new Exception("Invalid checkSum: " + inPut[0] + " != " + checkSum);
+                                }
 
+                            }
+                            catch(Exception e) {
+                               System.out.println(e.toString());
+                                write.println("Check Sum Error: " + inPut[0] + " != " + checkSum);
+                                continue;
+                            }
 
+                            write.println("Check sum OK");
 
 
                             // Communication successful reset retry count

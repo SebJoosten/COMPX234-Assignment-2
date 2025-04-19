@@ -74,24 +74,22 @@ public class Assignment_2_Client {
 
             // Receive something
             String line = read.readLine();
+            String printOut = " ";
             System.out.println("server sent: \"" + line + "\"");
 
-            for(int i = 0 ; i < 10 ; i++) {
-                writer.println("This is message " + i);
+            // Get the list of instructions convert and send them
+            for (Instruction<String, String, String> i : outPuts.getOutputs()) {
 
-                // Receive something
+                writer.println(convertInstruction(i));
+
                 line = read.readLine();
-                // Print the line
-                System.out.println("server sent: \"" + line + "\"");
-
+                // !!!!!!!!!!!!!!!!!! FIX output STRING
+                System.out.println(i.command() + " " + i.key() + " " + i.value() + ": " + line);
             }
 
-            while(true){}
-            //writer.println("CLOSE");
-
             // Close connection
-            //sock.close();
-
+            writer.println("CLOSE");
+            sock.close();
 
         } catch (IOException e) {
             System.err.println("IO Exception: " + e);
@@ -110,7 +108,6 @@ public class Assignment_2_Client {
         // Make a new instruction list or reset the old one
         outPuts = new InstructionStorage();
         System.out.println("**************************** Loading TXT file: " + filePath + " ***************************");
-
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -191,6 +188,7 @@ public class Assignment_2_Client {
         private void add(String command, String key, String value) {
             outputs.add(new Instruction<>(command, key, value));
         }
+
 
         // Print the list to confirm it's all there or check order
         private void printList(){
