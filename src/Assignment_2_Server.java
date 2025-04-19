@@ -1,7 +1,9 @@
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 // this is the basic hello world Implementation from class
 public class Assignment_2_Server {
@@ -12,6 +14,10 @@ public class Assignment_2_Server {
     private static final int retries = 10;
     // A list of connected threads
     private static List<Thread> clientConnections = new ArrayList<>();
+    // Hash map for pairs of strings
+    HashMap<String, String> tupleSpace = new HashMap<>();
+    // Semaphore for map edit
+    Semaphore turpleLock = new Semaphore(1);
 
 
     public static void main(String[] args) {
@@ -137,6 +143,9 @@ public class Assignment_2_Server {
                             // print input and echo
                             System.out.println(id + "gets " + in);
                             write.println(id + "Said: " + in);
+
+
+
 
                             // Communication successful reset retry count
                             threadRetries = 0;
