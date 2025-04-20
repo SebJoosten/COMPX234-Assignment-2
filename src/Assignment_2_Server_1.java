@@ -85,6 +85,9 @@ public class Assignment_2_Server_1 {
 
     }
 
+    /**
+     * THis just prints out the hash map containing the tuple space
+     */
     private static void printTupleSpace(){
 
         System.out.println("************************* CURRENT Tuple Space *************************");
@@ -254,9 +257,9 @@ public class Assignment_2_Server_1 {
     }
 
     /**
-     *
-     * @param k
-     * @return
+     * This is to perform the GET operation on the tuple space
+     * @param k The key your looking to retrieve information about
+     * @return a formatted output string ready to send
      */
     private static String tupleSpaceGET(String k){
 

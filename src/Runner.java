@@ -1,4 +1,10 @@
 public class Runner {
+
+    /**
+     * This is the runner it will optionally start a server and 10 clients
+     * @param args
+     * @throws InterruptedException
+     */
     public static void main(String[] args) throws InterruptedException {
         System.out.println("Runner is running!");
 
@@ -9,7 +15,8 @@ public class Runner {
         String path = "E:\\OneDrive\\Uni\\Year 2\\COMPX234\\School projects\\Assignment-2\\test-workload\\test-workload\\client_";
         //String path = "\\client_instructions\\client_";
 
-        //startServer();
+        // Starts a server thread
+        // startServer();
 
         // Start the clients one after the other
         for (int i = 10; i > 0; i--) {
