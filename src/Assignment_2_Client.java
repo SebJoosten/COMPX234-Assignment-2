@@ -70,12 +70,9 @@ public class Assignment_2_Client {
             PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
             BufferedReader read = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 
-            writer.println(args[0]);
-
-            // Receive something
+            // first contact with name
+            writer.println("Client-connecting");
             String line = read.readLine();
-            String printOut = " ";
-            System.out.println("server sent: \"" + line + "\"");
 
             // Get the list of instructions convert and send them
             for (Instruction<String, String, String> i : outPuts.getOutputs()) {
@@ -83,8 +80,13 @@ public class Assignment_2_Client {
                 writer.println(convertInstruction(i));
 
                 line = read.readLine();
-                // !!!!!!!!!!!!!!!!!! FIX output STRING
-                System.out.println(i.command() + " " + i.key() + " " + i.value() + ": " + line);
+
+                // Edit output string removing value if empty
+                String output = i.command() + " " + i.key() + " " + i.value();
+                while (output.endsWith(" ")) {
+                    output = output.substring(0, output.length() - 1);
+                }
+                System.out.println(output + ": " + line);
             }
 
             // Close connection
@@ -224,7 +226,7 @@ public class Assignment_2_Client {
         // Generate string
         String output = " " + instruction + " " + key + " " + value;
 
-        // Trim the spaces off the end if value is empty
+        // Trim the spaces off the end if value is empty - value is empty
         while (output.endsWith(" ")) {
             output = output.substring(0, output.length() - 1);
         }

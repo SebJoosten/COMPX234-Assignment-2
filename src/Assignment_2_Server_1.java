@@ -1,26 +1,25 @@
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 // this is the basic hello world Implementation from class
-public class Assignment_2_Server {
+public class Assignment_2_Server_1 {
 
     // The timeout interval for connection failure
-    private static final int timeOut = 2000;
+    private static final int timeOut = 10000;
     // The number of retries before a thread closes the connection
     private static final int retries = 10;
     // A list of connected threads
     private static List<Thread> clientConnections = new ArrayList<>();
     // Hash map for pairs of strings
-    HashMap<String, String> tupleSpace = new HashMap<>();
+    private static HashMap<String, String> tupleSpace = new HashMap<>();
     // Semaphore for map edit
-    Semaphore turpleLock = new Semaphore(1);
+    private static Semaphore tupleLock = new Semaphore(1);
 
 
-    public static void main(String[] args) {
+    public static void main(int args) {
 
         // Get the initialization port This way it can be changed easily
         // int port = 51234;
@@ -63,7 +62,7 @@ public class Assignment_2_Server {
                         System.out.println("Main Server -> Client connected: " + s.getInetAddress());
 
                         // Pass socket to a thread and start
-                        clientConnection handler = new clientConnection(s.getInetAddress().toString(), s);
+                        clientConnection handler = new clientConnection(s.getInetAddress(), s);
                         new Thread(handler).start();
 
                     // Catch for time out currently just set to retry
@@ -99,8 +98,8 @@ public class Assignment_2_Server {
          * @param id The id for this thread
          * @param clientConnect The socket you've established a connection on
          */
-        public clientConnection(String id, Socket clientConnect) {
-            this.id = "Sub Connection " + id + " -> ";
+        public clientConnection(InetAddress id, Socket clientConnect) {
+            this.id = "Sub Connection " + id.toString() + " -> ";
             this.clientConnect = clientConnect;
         }
 
@@ -141,25 +140,49 @@ public class Assignment_2_Server {
                             }
 
 
-                            String[] inPut = in.split(" ");
+                            String[] inPut = in.split(" ", 4);
                             int checkSum = 0;
 
-                            // print input and echo
+                            // Check sum and check string length this also checks initial communication
                             try{
                                 checkSum = Integer.parseInt(inPut[0]);
                                 if (in.length() != checkSum) {
-                                    throw new Exception("Invalid checkSum: " + inPut[0] + " != " + checkSum);
+                                    throw new Exception("ERR Invalid checkSum: " + inPut[0] + " != " + checkSum);
                                 }
-
+                                if (checkSum > 999) {
+                                    throw new Exception("ERR String too long: " + inPut[0] + " != " + checkSum);
+                                }
                             }
                             catch(Exception e) {
-                               System.out.println(e.toString());
-                                write.println("Check Sum Error: " + inPut[0] + " != " + checkSum);
+                                System.out.println(id + "checkSum: " + inPut[0]);
+                                if (Objects.equals(inPut[0], "Client-connecting")) {
+                                    write.println("Connection established");
+                                } else {
+                                    write.println(e.toString());
+                                }
                                 continue;
                             }
 
-                            write.println("Check sum OK");
+                            // Set a default return string
+                            String returnString = "ERR";
 
+                            // CHeck for PUT READ and GET instructions then call them
+                            if (Objects.equals("P" , inPut[1])) {
+                                if(inPut[3] != null){
+                                    returnString = tupleSpacePUT(inPut[2],inPut[3]);
+                                }
+                            }
+                            if (Objects.equals("R" , inPut[1])) {
+                                returnString = tupleSpaceREAD(inPut[2]);
+                            }
+                            if (Objects.equals("G" , inPut[1])) {
+                                returnString = tupleSpaceGET(inPut[2]);
+                            }
+
+                            returnString = returnString.trim();
+                            // Add the number to the front
+                            returnString = String.format("%03d" , returnString.length() + 4) + " " + returnString;
+                            write.println(returnString);
 
                             // Communication successful reset retry count
                             threadRetries = 0;
@@ -169,6 +192,10 @@ public class Assignment_2_Server {
                     } catch (SocketTimeoutException e) {
                         System.out.println(id + "Timeout retry: " + threadRetries);
                         threadRetries++;
+                    }
+
+                    for (Map.Entry<String, String> entry : tupleSpace.entrySet()) {
+                        System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
                     }
 
                 }
@@ -189,4 +216,85 @@ public class Assignment_2_Server {
         }
 
     } // **** Thread end ****
+
+    /**
+     * This method is to put things in the tuple space if k already exists returns error string
+     * @param k key of the value your wanting to add to the tuple space
+     * @param v the value that goes with that key
+     * @return the formatted return string with the result of the function
+     */
+    private static String tupleSpacePUT(String k , String v ){
+        String out = "ERR " + k + " EXISTS";
+
+        // Try and acquire a lock The check if k exists.
+        try {
+            // if k docent exist ass k, v
+            if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                if (!tupleSpace.containsKey(k)) {
+                    tupleSpace.put(k, v);
+                    out = "OK (" + tupleSpace.get(k) + " , " + k + ")" + " added";
+                }
+                tupleLock.release();
+            }
+        } catch (Exception e) {
+            System.out.println("Server tuple TIMEOUT " + e.toString());
+            out = "ERR tupleSpace TIMEOUT " + k ;
+        }
+
+        return out;
+
+    }
+
+    /**
+     *
+     * @param k
+     * @return
+     */
+    private static String tupleSpaceGET(String k){
+
+        String out = "ERR " + k + " dose not exist";
+
+        // Try and acquire a lock The check if k exists. if exists return value
+        try {
+            if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                if (tupleSpace.containsKey(k)) {
+                    out = "OK (" + tupleSpace.get(k) + " , " + k + ")" + " removed";
+                    tupleSpace.remove(k);
+                }
+                tupleLock.release();
+            }
+        } catch (Exception e) {
+            System.out.println("Server tuple TIMEOUT " + e.toString());
+            out = "ERR tupleSpace TIMEOUT " + k ;
+        }
+
+        return out;
+    }
+
+    /**
+     * This is to make a read call on the tuple space
+     * @param k k is the key your wanting a value for
+     * @return it will return a formatted output string with the result
+     */
+    private static String tupleSpaceREAD(String k) {
+
+        // Set default string return
+        String out = "ERR " + k + " dose not exist";
+
+        // Try and acquire a lock The check if k exists. if exists return value
+        try {
+            if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                if (tupleSpace.containsKey(k)) {
+                    out = "OK (" + tupleSpace.get(k) + " , " + k + ")" + " read";
+                }
+                tupleLock.release();
+            }
+        } catch (Exception e) {
+            System.out.println("Server tuple TIMEOUT " + e.toString());
+            out = "ERR tupleSpace TIMEOUT " + k ;
+        }
+
+        return out;
+    }
+
 }
