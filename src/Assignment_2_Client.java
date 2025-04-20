@@ -176,6 +176,7 @@ public class Assignment_2_Client {
     /**
      * an object class for list input
      * This is so I can check the file load it and forget it knowing it's all valid
+     * Just makes the Conversions and passing them around easier as its one object
      */
     private static class InstructionStorage {
         // Store a list of Instruction objects

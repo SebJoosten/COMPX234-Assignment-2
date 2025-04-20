@@ -19,7 +19,7 @@ public class Assignment_2_Server_1 {
     private static Semaphore tupleLock = new Semaphore(1);
 
 
-    public static void main(int args) {
+    public static void main(String[] args) {
 
         // Get the initialization port This way it can be changed easily
         // int port = 51234;
@@ -67,6 +67,7 @@ public class Assignment_2_Server_1 {
 
                     // Catch for time out currently just set to retry
                     } catch (SocketTimeoutException e) {
+                        printTupleSpace();
                         System.out.println("Main Server -> Socket timeout: " + port);
                     // Catch socket IO errors
                     } catch (IOException e) {
@@ -80,10 +81,20 @@ public class Assignment_2_Server_1 {
                 System.err.println("Main Server -> general socket failure" + e.getMessage() + " Retry on port: " + port);
             }
 
-        } // Server listen loop
+        }
 
     }
 
+    private static void printTupleSpace(){
+
+        System.out.println("************************* CURRENT Tuple Space *************************");
+        for (Map.Entry<String, String> entry : tupleSpace.entrySet()) {
+            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+        }
+        System.out.println("************************* CURRENT Tuple Space *************************");
+        System.out.println("*************************  <-     END     ->  *************************");
+
+    }
 
     /**
      * New thread for client connection
@@ -194,9 +205,6 @@ public class Assignment_2_Server_1 {
                         threadRetries++;
                     }
 
-                    for (Map.Entry<String, String> entry : tupleSpace.entrySet()) {
-                        System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
-                    }
 
                 }
 
