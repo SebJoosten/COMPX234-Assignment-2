@@ -3,6 +3,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 // this is the basic hello world Implementation from class
 public class Assignment_2_Server_1 {
@@ -17,6 +18,14 @@ public class Assignment_2_Server_1 {
     private static HashMap<String, String> tupleSpace = new HashMap<>();
     // Semaphore for map edit
     private static Semaphore tupleLock = new Semaphore(1);
+
+    private static int operations = 0;
+    private static int reads = 0;
+    private static int gets = 0;
+    private static int puts = 0;
+    private static AtomicInteger errors = new AtomicInteger(0);
+    private static AtomicInteger clients = new AtomicInteger(0);
+
 
 
     public static void main(String[] args) {
@@ -40,6 +49,7 @@ public class Assignment_2_Server_1 {
         } catch (NumberFormatException e) {
             System.out.println("Main Server -> port input invalid integer");
             System.out.println(e.toString());
+            errors.incrementAndGet();
         }
 
         // Initial connection block with time out
@@ -69,9 +79,11 @@ public class Assignment_2_Server_1 {
                     } catch (SocketTimeoutException e) {
                         printTupleSpace();
                         System.out.println("Main Server -> Socket timeout: " + port);
+                        errors.incrementAndGet();
                     // Catch socket IO errors
                     } catch (IOException e) {
                         System.out.println("Main Server -> IO exception: "+ e.getMessage());
+                        errors.incrementAndGet();
                     }
 
                 }
@@ -79,6 +91,7 @@ public class Assignment_2_Server_1 {
             // Catch for ALL OTHER FAILURES
             } catch (IOException e) {
                 System.err.println("Main Server -> general socket failure" + e.getMessage() + " Retry on port: " + port);
+                errors.incrementAndGet();
             }
 
         }
@@ -91,11 +104,75 @@ public class Assignment_2_Server_1 {
     private static void printTupleSpace(){
 
         System.out.println("************************* CURRENT Tuple Space *************************");
-        for (Map.Entry<String, String> entry : tupleSpace.entrySet()) {
-            System.out.println("Key: " + entry.getKey() + ", Value: " + entry.getValue());
+
+        // Try and acquire to make sure the tuple space is not being edited at the time
+        try {
+
+            if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                // Print out all the tuples in tuple space
+                int count = 1;
+                for (Map.Entry<String, String> entry : tupleSpace.entrySet()) {
+                    System.out.println(count + ": Key: " + entry.getKey() + ", Value: " + entry.getValue());
+                    count++;
+                }
+                tupleLock.release();
+
+            }
+
+        } catch (Exception e) {
+            System.out.println("Server tuple TIMEOUT " + e.toString());
+            errors.incrementAndGet();
         }
+
         System.out.println("************************* CURRENT Tuple Space *************************");
         System.out.println("*************************  <-     END     ->  *************************");
+
+    }
+
+    /**
+     * A method to print out the stats of the tuple space
+     * It grabs current values all with in semaphore to make sure tuple space is not being edited at the time
+     */
+    private void printTupleSpaceStats(){
+
+        // Try and acquire to make sure the tuple space is not being edited at the time
+        try {
+
+            if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+
+                // Generate the average sizes,
+                double averageKeySize = 0;
+                double averageValueSize = 0;
+
+                for (Map.Entry<String, String> entry : tupleSpace.entrySet()) {
+                    averageKeySize += entry.getKey().length();
+                    averageValueSize += entry.getValue().length();
+                }
+
+                // calculate averages
+                averageKeySize /= tupleSpace.size();
+                averageValueSize /= tupleSpace.size();
+                double averageTupleSize = averageKeySize + averageValueSize;
+
+                // Print out stats
+                System.out.println("--- Tuple Space Stats ---");
+                System.out.println("Tuples: " + tupleSpace.size());
+                System.out.println("Avg Tuple Size: " + averageTupleSize);
+                System.out.println("Avg Key Size: " + averageKeySize);
+                System.out.println("Avg Value Size: " + averageValueSize);
+                System.out.println("Operations: " + operations);
+                System.out.println("READs: " + reads);
+                System.out.println("GETs: " + gets);
+                System.out.println("PUTs: " + puts );
+                System.out.println("Errors: " + errors.get());
+
+                // release lock
+                tupleLock.release();
+            }
+        } catch (Exception e) {
+            System.out.println("Server tuple TIMEOUT " + e.toString());
+            errors.incrementAndGet();
+        }
 
     }
 
@@ -120,6 +197,7 @@ public class Assignment_2_Server_1 {
         // The thread itself
         @Override
         public void run() {
+            clients.incrementAndGet();
             System.out.println(id + "running");
 
             // While communicating "running" when communication stops or faults it just drops it
@@ -173,6 +251,7 @@ public class Assignment_2_Server_1 {
                                     write.println("Connection established");
                                 } else {
                                     write.println(e.toString());
+                                    errors.incrementAndGet();
                                 }
                                 continue;
                             }
@@ -206,8 +285,8 @@ public class Assignment_2_Server_1 {
                     } catch (SocketTimeoutException e) {
                         System.out.println(id + "Timeout retry: " + threadRetries);
                         threadRetries++;
+                        errors.incrementAndGet();
                     }
-
 
                 }
 
@@ -222,6 +301,9 @@ public class Assignment_2_Server_1 {
             catch (IOException e) {
                 System.out.println(id + "IO exception: " + e.toString());
                 running = false;
+                errors.incrementAndGet();
+            }finally {
+                clients.decrementAndGet();
             }
 
         }
@@ -235,21 +317,26 @@ public class Assignment_2_Server_1 {
      * @return the formatted return string with the result of the function
      */
     private static String tupleSpacePUT(String k , String v ){
-        String out = "ERR " + k + " EXISTS";
+        String out = "ERR " + k + " already exists";
 
         // Try and acquire a lock The check if k exists.
         try {
             // if k docent exist ass k, v
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                operations++;
                 if (!tupleSpace.containsKey(k)) {
                     tupleSpace.put(k, v);
-                    out = "OK (" + tupleSpace.get(k) + " , " + k + ")" + " added";
+                    out = "OK (" + k + ", " + tupleSpace.get(k) + ")" + " added";
+                    puts++;
+                }else{
+                    errors.incrementAndGet();
                 }
                 tupleLock.release();
             }
         } catch (Exception e) {
             System.out.println("Server tuple TIMEOUT " + e.toString());
             out = "ERR tupleSpace TIMEOUT " + k ;
+            errors.incrementAndGet();
         }
 
         return out;
@@ -263,20 +350,25 @@ public class Assignment_2_Server_1 {
      */
     private static String tupleSpaceGET(String k){
 
-        String out = "ERR " + k + " dose not exist";
+        String out = "ERR " + k + " does not exist";
 
         // Try and acquire a lock The check if k exists. if exists return value
         try {
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                operations++;
                 if (tupleSpace.containsKey(k)) {
-                    out = "OK (" + tupleSpace.get(k) + " , " + k + ")" + " removed";
+                    out = "OK (" + k + ", " + tupleSpace.get(k) + ")" + " removed";
                     tupleSpace.remove(k);
+                    gets++;
+                }else{
+                    errors.incrementAndGet();
                 }
                 tupleLock.release();
             }
         } catch (Exception e) {
             System.out.println("Server tuple TIMEOUT " + e.toString());
             out = "ERR tupleSpace TIMEOUT " + k ;
+            errors.incrementAndGet();
         }
 
         return out;
@@ -290,22 +382,29 @@ public class Assignment_2_Server_1 {
     private static String tupleSpaceREAD(String k) {
 
         // Set default string return
-        String out = "ERR " + k + " dose not exist";
+        String out = "ERR " + k + " does not exist";
 
         // Try and acquire a lock The check if k exists. if exists return value
         try {
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
+                operations++;
                 if (tupleSpace.containsKey(k)) {
-                    out = "OK (" + tupleSpace.get(k) + " , " + k + ")" + " read";
+                    out = "OK (" + k + ", " + tupleSpace.get(k) + ")" + " read";
+                    reads++;
+                }else{
+                    errors.incrementAndGet();
                 }
                 tupleLock.release();
             }
         } catch (Exception e) {
             System.out.println("Server tuple TIMEOUT " + e.toString());
             out = "ERR tupleSpace TIMEOUT " + k ;
+            errors.incrementAndGet();
         }
 
         return out;
     }
+
+
 
 }

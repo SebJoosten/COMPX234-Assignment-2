@@ -19,7 +19,7 @@ public class Runner {
         // startServer();
 
         // Start the clients one after the other
-        for (int i = 10; i > 0; i--) {
+        for (int i = 1; i < 11; i++) {
             String[] clientArgs = {
                     hostname,
                     String.valueOf(port),

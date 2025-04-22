@@ -1,0 +1,90 @@
+PUT 1 One
+PUT 2 Two
+PUT 3 Three
+PUT 4 Four
+PUT 5 Five
+PUT 6 Six
+PUT 7 Seven
+PUT 8 Eight
+PUT 9 Nine
+PUT 10 Ten
+PUT 11 Eleven
+PUT 12 Twelve
+PUT 13 Thirteen
+PUT 14 Fourteen
+PUT 15 Fifteen
+PUT 16 Sixteen
+PUT 17 Seventeen
+PUT 18 Eighteen
+PUT 19 Nineteen
+PUT 20 Twenty
+GET 1
+GET 2
+GET 3
+GET 4
+GET 5
+GET 6
+GET 7
+GET 8
+GET 9
+GET 10
+READ 1
+READ 2
+READ 3
+READ 4
+READ 5
+READ 6
+READ 7
+READ 8
+READ 9
+READ 10
+READ 11
+READ 12
+READ 13
+READ 14
+READ 15
+READ 16
+READ 17
+READ 18
+READ 19
+READ 20
+PUT 1 One
+PUT 2 Two
+PUT 3 Three
+PUT 4 Four
+PUT 5 Five
+PUT 6 Six
+PUT 7 Seven
+PUT 8 Eight
+PUT 9 Nine
+PUT 10 Ten
+PUT 11 Eleven
+PUT 12 Twelve
+PUT 13 Thirteen
+PUT 14 Fourteen
+PUT 15 Fifteen
+PUT 16 Sixteen
+PUT 17 Seventeen
+PUT 18 Eighteen
+PUT 19 Nineteen
+PUT 20 Twenty
+READ 1
+READ 2
+READ 3
+READ 4
+READ 5
+READ 6
+READ 7
+READ 8
+READ 9
+READ 10
+READ 11
+READ 12
+READ 13
+READ 14
+READ 15
+READ 16
+READ 17
+READ 18
+READ 19
+READ 20

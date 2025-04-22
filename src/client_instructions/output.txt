@@ -1,0 +1,90 @@
+PUT 1 One: OK (1, One) added
+PUT 2 Two: OK (2, Two) added
+PUT 3 Three: OK (3, Three) added
+PUT 4 Four: OK (4, Four) added
+PUT 5 Five: OK (5, Five) added
+PUT 6 Six: OK (6, Six) added
+PUT 7 Seven: OK (7, Seven) added
+PUT 8 Eight: OK (8, Eight) added
+PUT 9 Nine: OK (9, Nine) added
+PUT 10 Ten: OK (10, Ten) added
+PUT 11 Eleven: OK (11, Eleven) added
+PUT 12 Twelve: OK (12, Twelve) added
+PUT 13 Thirteen: OK (13, Thirteen) added
+PUT 14 Fourteen: OK (14, Fourteen) added
+PUT 15 Fifteen: OK (15, Fifteen) added
+PUT 16 Sixteen: OK (16, Sixteen) added
+PUT 17 Seventeen: OK (17, Seventeen) added
+PUT 18 Eighteen: OK (18, Eighteen) added
+PUT 19 Nineteen: OK (19, Nineteen) added
+PUT 20 Twenty: OK (20, Twenty) added
+GET 1: OK (1, One) removed
+GET 2: OK (2, Two) removed
+GET 3: OK (3, Three) removed
+GET 4: OK (4, Four) removed
+GET 5: OK (5, Five) removed
+GET 6: OK (6, Six) removed
+GET 7: OK (7, Seven) removed
+GET 8: OK (8, Eight) removed
+GET 9: OK (9, Nine) removed
+GET 10: OK (10, Ten) removed
+READ 1: ERR 1 does not exist
+READ 2: ERR 2 does not exist
+READ 3: ERR 3 does not exist
+READ 4: ERR 4 does not exist
+READ 5: ERR 5 does not exist
+READ 6: ERR 6 does not exist
+READ 7: ERR 7 does not exist
+READ 8: ERR 8 does not exist
+READ 9: ERR 9 does not exist
+READ 10: ERR 10 does not exist
+READ 11: OK (11, Eleven) read
+READ 12: OK (12, Twelve) read
+READ 13: OK (13, Thirteen) read
+READ 14: OK (14, Fourteen) read
+READ 15: OK (15, Fifteen) read
+READ 16: OK (16, Sixteen) read
+READ 17: OK (17, Seventeen) read
+READ 18: OK (18, Eighteen) read
+READ 19: OK (19, Nineteen) read
+READ 20: OK (20, Twenty) read
+PUT 1 One: OK (1, One) added
+PUT 2 Two: OK (2, Two) added
+PUT 3 Three: OK (3, Three) added
+PUT 4 Four: OK (4, Four) added
+PUT 5 Five: OK (5, Five) added
+PUT 6 Six: OK (6, Six) added
+PUT 7 Seven: OK (7, Seven) added
+PUT 8 Eight: OK (8, Eight) added
+PUT 9 Nine: OK (9, Nine) added
+PUT 10 Ten: OK (10, Ten) added
+PUT 11 Eleven: ERR 11 already exists
+PUT 12 Twelve: ERR 12 already exists
+PUT 13 Thirteen: ERR 13 already exists
+PUT 14 Fourteen: ERR 14 already exists
+PUT 15 Fifteen: ERR 15 already exists
+PUT 16 Sixteen: ERR 16 already exists
+PUT 17 Seventeen: ERR 17 already exists
+PUT 18 Eighteen: ERR 18 already exists
+PUT 19 Nineteen: ERR 19 already exists
+PUT 20 Twenty: ERR 20 already exists
+READ 1: OK (1, One) read
+READ 2: OK (2, Two) read
+READ 3: OK (3, Three) read
+READ 4: OK (4, Four) read
+READ 5: OK (5, Five) read
+READ 6: OK (6, Six) read
+READ 7: OK (7, Seven) read
+READ 8: OK (8, Eight) read
+READ 9: OK (9, Nine) read
+READ 10: OK (10, Ten) read
+READ 11: OK (11, Eleven) read
+READ 12: OK (12, Twelve) read
+READ 13: OK (13, Thirteen) read
+READ 14: OK (14, Fourteen) read
+READ 15: OK (15, Fifteen) read
+READ 16: OK (16, Sixteen) read
+READ 17: OK (17, Seventeen) read
+READ 18: OK (18, Eighteen) read
+READ 19: OK (19, Nineteen) read
+READ 20: OK (20, Twenty) read

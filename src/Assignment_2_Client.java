@@ -83,11 +83,17 @@ public class Assignment_2_Client {
                 writer.println(convertInstruction(i));
                 line = read.readLine();
 
+                // Cut off the check sum
+                if (line.length() > 4) {
+                    line = line.substring(4);
+                }
+
                 // Edit output string removing value if empty
                 String output = i.command() + " " + i.key() + " " + i.value();
                 while (output.endsWith(" ")) {
                     output = output.substring(0, output.length() - 1);
                 }
+
                 System.out.println(output + ": " + line);
             }
 
@@ -115,7 +121,6 @@ public class Assignment_2_Client {
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
-            br.readLine();
             int lineCount = 0;
             while ((line = br.readLine()) != null) {
                 String[] input = line.split(" ",3);
