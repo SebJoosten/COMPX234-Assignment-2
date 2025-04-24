@@ -16,6 +16,8 @@ public class Assignment_2_Client {
 
     // a class to store the instruction list
     private static InstructionStorage outPuts;
+    private static boolean printProtocol = true;
+    private static boolean printFileLoad = false;
 
     /**
      * Main class of client takes in 3 arguments
@@ -42,7 +44,7 @@ public class Assignment_2_Client {
             port = Integer.parseInt(args[1]);
             if (port < 50000 || port > 59999) {
                 System.out.println("************ INVALID PORT ************");
-                System.out.println("Port must be between 0 and 65535.");
+                System.out.println("Port must be between 50000 and 59999.");
                 return;
             }
 
@@ -65,6 +67,7 @@ public class Assignment_2_Client {
             return;
         }
 
+        // Start listening for connections
         try {
 
             // Connect and set up input and output buffers
@@ -72,29 +75,48 @@ public class Assignment_2_Client {
             PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
             BufferedReader read = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 
-            // First contact just to get things moving
-            writer.println("Client-connecting");
-            String line = read.readLine();
-
-            // Send list of instructions
+            // Send a list of instructions
             for (Instruction<String, String, String> i : outPuts.getOutputs()) {
 
                 // Send an instruction and wait for a reply
-                writer.println(convertInstruction(i));
-                line = read.readLine();
+                String line = "007 ERR";
+                String out = convertInstruction(i);
+                writer.println(out);
 
-                // Cut off the check sum
+                // Print the line if debugging is enabled
+                if (printProtocol) {
+                    System.out.println("SENT --> " + out);
+                }
+
+                // Read in a line and check checkSum
+                line = read.readLine();
+                try{
+
+                    String[] inPut = line.split(" ", 4);
+                    int checkSum = Integer.parseInt(inPut[0]);
+                    if (line.length() != checkSum) {
+                        throw new Exception("ERR Invalid checkSum: " + inPut[0] + " != " + checkSum);
+                    }
+                    if (checkSum > 999) {
+                        throw new Exception("ERR String too long: " + inPut[0] + " != " + checkSum);
+                    }
+
+                }
+                catch(Exception e) {
+                    System.out.println("CheckSum: " + " ERROR: " + e.toString());
+                    continue;
+                }
+
+                // Format the output line for console printing
                 if (line.length() > 4) {
                     line = line.substring(4);
                 }
-
-                // Edit output string removing value if empty
                 String output = i.command() + " " + i.key() + " " + i.value();
                 while (output.endsWith(" ")) {
                     output = output.substring(0, output.length() - 1);
                 }
-
                 System.out.println(output + ": " + line);
+
             }
 
             // Close connection
@@ -150,20 +172,22 @@ public class Assignment_2_Client {
 
                     // Add it to the output list and print a Line for debugging
                     outPuts.add(instruction, key, value);
-                    System.out.println("--> Loaded DATA -> Line: " + lineCount +
-                            " Instruction: " + instruction +
-                            " key: " + key +
-                            ((Objects.equals(value, " ")) ? " " : " value: " + value));
 
-                    int last = outPuts.getOutputs().size() - 1;
-                    System.out.println(convertInstruction(outPuts.getOutputs().get(last)));
+                    // Print The processed line from the list for debugging
+                    if(printFileLoad) {
+                        System.out.println("--> Loaded DATA -> Line: " + lineCount +
+                                " Instruction: " + instruction +
+                                " key: " + key +
+                                ((Objects.equals(value, " ")) ? " " : " value: " + value));
+                        int last = outPuts.getOutputs().size() - 1;
+                        System.out.println(convertInstruction(outPuts.getOutputs().get(last)));
+                    }
 
                 } else {
-                    // If anything else fails jump out and move to the next line
+                    // If anything else fails, jump out and move to the next line
                     System.out.println("******** INVALID INPUT FORMAT ********");
                     System.out.println("Line: " + lineCount + " IGNORED");
                 }
-
             }
 
         // Catch for file errors
@@ -172,16 +196,18 @@ public class Assignment_2_Client {
             System.out.println(err.toString());
         }
 
-        System.out.println("****************************  Loaded TXT file: " + filePath + " *************************** ");
-
+        // Bottom line to encapsulate the file load debugging
+        if (printFileLoad) {
+            System.out.println("****************************  Loaded TXT file: " + filePath + " *************************** ");
+        }
     }
 
     //************************* Instruction storage/Retrieval and storage *************************
     /**
      * An object class for list input
-     * This is so I can check the file load it and forget it knowing it's all valid
+     * This is so I can check the file, load it and forget it knowing it's all valid
      * Just makes the Conversions and passing them around easier as its one object
-     * this is a little un necessary, but I also wanted to play with it a little more
+     * this is a little unnecessary, but I also wanted to play with it a little more
      */
     private static class InstructionStorage {
         // Store a list of Instruction objects
@@ -221,16 +247,16 @@ public class Assignment_2_Client {
         // Change put get and read to P G and R
         instruction = (Objects.equals(instruction, "PUT")) ? "P" :
                         (Objects.equals(instruction, "GET")) ? "G" :
-                         (Objects.equals(instruction, "READ")) ? "R" : "ERROR";
+                         (Objects.equals(instruction, "READ")) ? "R" : "ERR";
 
         // Check for error
-        if (Objects.equals(instruction, "ERROR")) {
+        if (Objects.equals(instruction, "ERR")) {
             System.out.println("CONVERSION ERROR");
             System.out.println("Instruction -> " + i.toString());
-            return "ERROR";
+            return "007 ERR";
         }
 
-        // Generate return string > Remove spaces > Add character value
+        // Generate return string > Remove spaces if no value present > Add character value
         String output = " " + instruction + " " + key + " " + value;
         while (output.endsWith(" ")) {
             output = output.substring(0, output.length() - 1);
