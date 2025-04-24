@@ -19,7 +19,7 @@ public class Runner {
         //String path = "E:\\OneDrive\\Uni\\Year 2\\COMPX234\\School projects\\Assignment-2\\Assignment-2-tcp server\\src\\client_";
 
         // root scr
-        String path = "src/client_";
+        String path = "client_";
 
         // Starts a server thread
         startServer();
