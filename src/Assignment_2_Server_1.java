@@ -11,18 +11,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Assignment_2_Server_1 {
 
-    // The timeout interval for connection failure
+    // Set time out and retry count for socket timeouts and retries respectively
     private static final int timeOut = 10000;
-    // The number of retries before a thread closes the connection
-    private static final int retries = 10;
+    private static final int retryAttempts = 10;
+    private static final int tupleStatsPrintTime = 10000;
+
     // A list of connected threads
     private static List<Thread> clientConnections = new ArrayList<>();
-    // Hash map for pairs of strings
+
+    // Hash map and semaphore for tuple space storage and editing
     private static HashMap<String, String> tupleSpace = new HashMap<>();
-    // Semaphore for tupleSpace edit
     private static Semaphore tupleLock = new Semaphore(1);
-    // Debugging flag for printing protocol
-    private static boolean printProticol = true;
+
+    // Debugging flags
+    private static boolean printProticol = false;   // Print out the protocol as it's being sent
+    private static boolean timeOutsMsg = false;     // Prints out the time-out messages
 
     // A collection of general stats for the server that must only be accessed inside tupleSpace lock
     private static int operations = 0;
@@ -31,8 +34,8 @@ public class Assignment_2_Server_1 {
     private static int puts = 0;
     // Other general stats that can be incremented and decremented whenever necessary
     private static AtomicInteger errors = new AtomicInteger(0);
-    private static AtomicInteger clients = new AtomicInteger(0);
-
+    private static AtomicInteger currentClients = new AtomicInteger(0);
+    private static AtomicInteger totalClients = new AtomicInteger(0);
 
     /**
      * The main thread for the server takes in 1 argument the port number it's to listen on
@@ -63,6 +66,16 @@ public class Assignment_2_Server_1 {
             errors.incrementAndGet();
         }
 
+        // Make and start the timer for the stats' printer
+        Timer timer = new Timer("Stats Timer", false);
+        TimerTask printStats = new TimerTask() {
+            @Override
+            public void run() {
+                printTupleSpaceStats();
+            }
+        };
+        timer.scheduleAtFixedRate(printStats,0,tupleStatsPrintTime);
+
         // Initial connection block with time out just in case a connection fails
         while (true) {
 
@@ -87,12 +100,10 @@ public class Assignment_2_Server_1 {
 
                     // Catch for time out currently set to retry
                     } catch (SocketTimeoutException e) {
-                        System.out.println("Main Server -> Socket timeout: " + port);
-                        errors.incrementAndGet();
+                        if (timeOutsMsg) System.out.println("Main Server -> Socket timeout: " + port);
                     // Catch socket IO errors
                     } catch (IOException e) {
-                        System.out.println("Main Server -> IO exception: "+ e.getMessage());
-                        errors.incrementAndGet();
+                        if (timeOutsMsg) System.out.println("Main Server -> IO exception: "+ e.getMessage());
                     }
 
                 }
@@ -100,7 +111,6 @@ public class Assignment_2_Server_1 {
             // Catch for ALL OTHER FAILURES
             } catch (IOException e) {
                 System.err.println("Main Server -> general socket failure" + e.getMessage() + " Retry on port: " + port);
-                errors.incrementAndGet();
             }
 
         }
@@ -142,7 +152,7 @@ public class Assignment_2_Server_1 {
      * A method to print out the stats of the tuple space
      * It grabs current values all with in semaphore to make sure tuple space is not being edited at the time
      */
-    private void printTupleSpaceStats(){
+    private static void printTupleSpaceStats(){
 
         // Try and acquire to make sure the tuple space is not being edited at the time
         try {
@@ -163,12 +173,19 @@ public class Assignment_2_Server_1 {
                 averageValueSize /= tupleSpace.size();
                 double averageTupleSize = averageKeySize + averageValueSize;
 
+                // Do some rounding to make it easier to read
+                averageKeySize = Math.round(averageKeySize * 1_000) / 1_000.0;
+                averageValueSize = Math.round(averageValueSize * 1_000) / 1_000.0;
+                averageTupleSize = Math.round(averageTupleSize * 1_000) / 1_000.0;
+
                 // Print out stats
                 System.out.println("--- Tuple Space Stats ---");
                 System.out.println("Tuples: " + tupleSpace.size());
                 System.out.println("Avg Tuple Size: " + averageTupleSize);
                 System.out.println("Avg Key Size: " + averageKeySize);
                 System.out.println("Avg Value Size: " + averageValueSize);
+                System.out.println("Current Clients: " + currentClients.get());
+                System.out.println("Total Clients: " + totalClients.get());
                 System.out.println("Operations: " + operations);
                 System.out.println("READs: " + reads);
                 System.out.println("GETs: " + gets);
@@ -178,6 +195,7 @@ public class Assignment_2_Server_1 {
                 // release lock
                 tupleLock.release();
             }
+
         } catch (Exception e) {
             System.out.println("Server tuple TIMEOUT " + e.toString());
             errors.incrementAndGet();
@@ -206,7 +224,8 @@ public class Assignment_2_Server_1 {
         // The thread itself
         @Override
         public void run() {
-            clients.incrementAndGet();
+            currentClients.incrementAndGet();
+            totalClients.incrementAndGet();
             System.out.println(id + "running");
 
             // While communicating "running" when communication stops or faults, it just drops it
@@ -225,7 +244,7 @@ public class Assignment_2_Server_1 {
                 );
 
                 // While running and retry counter is still under the allotted amount
-                while (running && threadRetries < retries) {
+                while (running && threadRetries < retryAttempts) {
 
                     try {
 
@@ -285,9 +304,7 @@ public class Assignment_2_Server_1 {
                             write.println(returnString);
 
                             // Print the line if debugging is enabled
-                            if (printProticol) {
-                                System.out.println("SENT --> " + returnString);
-                            }
+                            if (printProticol) System.out.println("SENT --> " + returnString);
 
                             // Communication successfully reset retry count
                             threadRetries = 0;
@@ -315,7 +332,7 @@ public class Assignment_2_Server_1 {
                 running = false;
                 errors.incrementAndGet();
             }finally {
-                clients.decrementAndGet();
+                currentClients.decrementAndGet();
             }
 
         }
@@ -337,10 +354,10 @@ public class Assignment_2_Server_1 {
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
 
                 operations++;
+                puts++;
                 if (!tupleSpace.containsKey(k)) {
                     tupleSpace.put(k, v);
                     out = "OK (" + k + ", " + tupleSpace.get(k) + ")" + " added";
-                    puts++;
 
                 }else{
                     errors.incrementAndGet();
@@ -373,10 +390,10 @@ public class Assignment_2_Server_1 {
 
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
                 operations++;
+                gets++;
                 if (tupleSpace.containsKey(k)) {
                     out = "OK (" + k + ", " + tupleSpace.get(k) + ")" + " removed";
                     tupleSpace.remove(k);
-                    gets++;
 
                 }else{
                     errors.incrementAndGet();
@@ -408,9 +425,9 @@ public class Assignment_2_Server_1 {
 
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
                 operations++;
+                reads++;
                 if (tupleSpace.containsKey(k)) {
                     out = "OK (" + k + ", " + tupleSpace.get(k) + ")" + " read";
-                    reads++;
 
                 }else{
                     errors.incrementAndGet();

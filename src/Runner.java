@@ -22,7 +22,8 @@ public class Runner {
         String path = "src/client_";
 
         // Starts a server thread
-        // startServer();
+        startServer();
+        Thread.sleep(1000);
 
         // Start the clients one after the other
         for (int i = 1; i < 11; i++) {

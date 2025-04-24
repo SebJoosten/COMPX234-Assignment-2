@@ -16,7 +16,9 @@ public class Assignment_2_Client {
 
     // a class to store the instruction list
     private static InstructionStorage outPuts;
-    private static boolean printProtocol = true;
+    // Debugging flag for printing protocol Just prints whatever it sends out
+    private static boolean printProtocol = false;
+    // Debugging flag to print out as it's loading a file
     private static boolean printFileLoad = false;
 
     /**
@@ -39,7 +41,7 @@ public class Assignment_2_Client {
         String filePath = args[2];
         int port = 0;
 
-        // Try to parse and check port is valid
+        // Try to parse and check the port is valid
         try{
             port = Integer.parseInt(args[1]);
             if (port < 50000 || port > 59999) {
@@ -84,9 +86,7 @@ public class Assignment_2_Client {
                 writer.println(out);
 
                 // Print the line if debugging is enabled
-                if (printProtocol) {
-                    System.out.println("SENT --> " + out);
-                }
+                if (printProtocol) System.out.println("SENT --> " + out);
 
                 // Read in a line and check checkSum
                 line = read.readLine();
