@@ -1,3 +1,5 @@
+import java.io.File;
+
 public class Runner {
 
     /**
@@ -22,26 +24,56 @@ public class Runner {
         String path = "client_";
 
         // Starts a server thread
-        startServer();
+        //  startServer();
         Thread.sleep(1000);
 
         // Start the clients one after the other
-        for (int i = 1; i < 11; i++) {
+        for (int j = 0; j < 100; j++) {
+            for (int i = 1; i < 11; i++) {
 
-            // Construct the arguments for the client
-            String[] clientArgs = {
-                    hostname,
-                    String.valueOf(port),
-                    path + i + ".txt"
-            };
 
-            // Run the client with the constructed arguments
-            Assignment_2_Client.main(clientArgs);
+                File file = new File(path + i + ".txt");
+                if (!file.exists()) {
+                    System.out.println("Missing file: " + file.getAbsolutePath());
+                    continue; // skip this client
+                }
 
-            // delay if needed
-            Thread.sleep(1); // 200ms
+                // Construct the arguments for the client
+                String[] clientArgs = {
+                        hostname,
+                        String.valueOf(port),
+                        path + i + ".txt"
+                };
+
+                clientThread(clientArgs);
+
+                // Run the client with the constructed arguments
+                //Assignment_2_Client.main(clientArgs);
+
+                // delay if needed
+                Thread.sleep(1); // 200ms
+            }
         }
     }
+
+
+    private static void clientThread(String[] clientArgs) {
+
+        System.out.println("**********************************************************" + clientArgs[2]);
+
+        new Thread(() -> {
+            for(String arg : clientArgs) {
+                System.out.println(arg);
+            }
+            try {
+                Assignment_2_Client.main(clientArgs);
+            } catch (Exception e) {
+                System.out.println("Client start error ");
+                System.out.println(e.getMessage());
+            }
+        }).start();
+    }
+
 
     /**
      * This just starts the server in its own thread

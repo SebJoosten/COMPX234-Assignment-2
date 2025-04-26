@@ -11,6 +11,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Assignment_2_Server_1 {
 
+    public static void main(String[] args) {
+        Assignment_2_Server_1 client = new Assignment_2_Server_1();
+        client.runServer(args);
+    }
+
+
     // Set time out and retry count for socket timeouts and retries respectively
     private static final int timeOut = 10000;
     private static final int retryAttempts = 10;
@@ -33,16 +39,16 @@ public class Assignment_2_Server_1 {
     private static int gets = 0;
     private static int puts = 0;
     // Other general stats that can be incremented and decremented whenever necessary
-    private static AtomicInteger errors = new AtomicInteger(0);
-    private static AtomicInteger currentClients = new AtomicInteger(0);
-    private static AtomicInteger totalClients = new AtomicInteger(0);
+    private AtomicInteger errors = new AtomicInteger(0);
+    private AtomicInteger currentClients = new AtomicInteger(0);
+    private AtomicInteger totalClients = new AtomicInteger(0);
 
     /**
      * The main thread for the server takes in 1 argument the port number it's to listen on
      * It will continue indefinitely until the program is terminated or something goes wrong
      * @param args The port number you want to listen to
      */
-    public static void main(String[] args) {
+    public void runServer(String[] args) {
 
         // Get the initialization port This way it can be changed easily
         // int port = 51234;
@@ -121,7 +127,7 @@ public class Assignment_2_Server_1 {
      * THis just prints out the hash map containing the tuple space
      * It does not print any of the stats with it, just the space itself
      */
-    private static void printTupleSpace(){
+    private void printTupleSpace(){
 
         System.out.println("************************* CURRENT Tuple Space *************************");
 
@@ -152,7 +158,7 @@ public class Assignment_2_Server_1 {
      * A method to print out the stats of the tuple space
      * It grabs current values all with in semaphore to make sure tuple space is not being edited at the time
      */
-    private static void printTupleSpaceStats(){
+    private void printTupleSpaceStats(){
 
         // Try and acquire to make sure the tuple space is not being edited at the time
         try {
@@ -207,7 +213,7 @@ public class Assignment_2_Server_1 {
      * New thread for client connection
      * This thread is passed the socked of the communication then terminates when the socket is closed or faults
      */
-    public static class clientConnection extends Thread {
+    public class clientConnection extends Thread {
         private String id;
         private Socket clientConnect;
 
@@ -345,7 +351,7 @@ public class Assignment_2_Server_1 {
      * @param v the value that goes with that key
      * @return the formatted return string with the result of the function ERR if duplicate
      */
-    private static String tupleSpacePUT(String k , String v ){
+    private String tupleSpacePUT(String k , String v ){
         String out = "ERR " + k + " already exists";
 
         // Try and acquire a lock The check if k exists.
@@ -380,7 +386,7 @@ public class Assignment_2_Server_1 {
      * @param k The key you're looking to retrieve information about and then remove from the tuple space
      * @return a formatted output string ready to send
      */
-    private static String tupleSpaceGET(String k){
+    private String tupleSpaceGET(String k){
 
         // Set default string
         String out = "ERR " + k + " does not exist";
@@ -415,7 +421,7 @@ public class Assignment_2_Server_1 {
      * @param k k is the key you're wanting a value for
      * @return it will return a formatted output string with the result
      */
-    private static String tupleSpaceREAD(String k) {
+    private String tupleSpaceREAD(String k) {
 
         // Set default string return
         String out = "ERR " + k + " does not exist";

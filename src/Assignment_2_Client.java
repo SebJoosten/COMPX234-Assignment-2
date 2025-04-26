@@ -4,22 +4,30 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+
+
+
 /**
  * This is the client side it takes in 3 arguments hostname , port , filepath
  * The file is a txt file formatted with the instructions for this client to send
  */
 public class Assignment_2_Client {
 
+    public static void main(String[] args) {
+        Assignment_2_Client client = new Assignment_2_Client();
+        client.runClient(args);
+    }
+
     // Instruction record with generics for Command, Key, and Value for inorder list Storage
     // Just meant I can pass an instruction around as one object and do what's needed
     record Instruction<C, K, V>(C command, K key, V value) {};
 
     // a class to store the instruction list
-    private static InstructionStorage outPuts;
+    private  InstructionStorage outPuts;
     // Debugging flag for printing protocol Just prints whatever it sends out
-    private static boolean printProtocol = false;
+    private  boolean printProtocol = false;
     // Debugging flag to print out as it's loading a file
-    private static boolean printFileLoad = false;
+    private  boolean printFileLoad = false;
 
     /**
      * Main class of client takes in 3 arguments
@@ -28,7 +36,7 @@ public class Assignment_2_Client {
      * 3 - File path to load instructions
      * @param args hostName portNumber "filePath"
      */
-    public static void main(String[] args) {
+    public void runClient(String[] args) {
 
         // Check argument length
         if (args.length != 3) {
@@ -135,7 +143,7 @@ public class Assignment_2_Client {
      * @param filePath The file path of the instruction set you wish to load
      *                 Normally the last of 3 arguments in to this class
      */
-    private static void loadTXTFile(String filePath){
+    private void loadTXTFile(String filePath){
 
         // Make a new instruction list or reset the old one
         outPuts = new InstructionStorage();
@@ -209,7 +217,7 @@ public class Assignment_2_Client {
      * Just makes the Conversions and passing them around easier as its one object
      * this is a little unnecessary, but I also wanted to play with it a little more
      */
-    private static class InstructionStorage {
+    private class InstructionStorage {
         // Store a list of Instruction objects
         private List<Instruction<String, String, String>> outputs = new ArrayList<>();
 
@@ -237,7 +245,7 @@ public class Assignment_2_Client {
      * @param i The instruction you want to translate in to the protocol
      * @return The instruction translated in to a string in the correct format
      */
-    private static String convertInstruction(Instruction i){
+    private String convertInstruction(Instruction i){
 
         // Creak up the instruction in to its parts
         String instruction = (String) i.command();
