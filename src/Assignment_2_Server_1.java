@@ -26,6 +26,7 @@ public class Assignment_2_Server_1 {
     private static List<Thread> clientConnections = new ArrayList<>();
 
     // Hash map and semaphore for tuple space storage and editing
+    // One tuple space shared
     private static HashMap<String, String> tupleSpace = new HashMap<>();
     private static Semaphore tupleLock = new Semaphore(1);
 
@@ -33,11 +34,11 @@ public class Assignment_2_Server_1 {
     private static boolean printProticol = false;   // Print out the protocol as it's being sent
     private static boolean timeOutsMsg = false;     // Prints out the time-out messages
 
-    // A collection of general stats for the server that must only be accessed inside tupleSpace lock
-    private static int operations = 0;
-    private static int reads = 0;
-    private static int gets = 0;
-    private static int puts = 0;
+    // separate stats per server instance
+    private int operations = 0;
+    private int reads = 0;
+    private int gets = 0;
+    private int puts = 0;
     // Other general stats that can be incremented and decremented whenever necessary
     private AtomicInteger errors = new AtomicInteger(0);
     private AtomicInteger currentClients = new AtomicInteger(0);
