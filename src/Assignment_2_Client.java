@@ -13,6 +13,10 @@ import java.util.Objects;
  */
 public class Assignment_2_Client {
 
+    /**
+     * Main used to start this class with passed in arguments
+     * @param args
+     */
     public static void main(String[] args) {
         Assignment_2_Client client = new Assignment_2_Client();
         client.runClient(args);
@@ -22,8 +26,12 @@ public class Assignment_2_Client {
     // Just meant I can pass an instruction around as one object and do what's needed
     record Instruction<C, K, V>(C command, K key, V value) {};
 
-    // a class to store the instruction list
+    // An instance class to store the instruction list
     private  InstructionStorage outPuts;
+    // Amount of tries the Client tries to connect before giving up
+    private int connectionRetries = 10;
+    // Time the client waits for a connection and time delay between attempts in ms
+    private int timeOut = 10000;
     // Debugging flag for printing protocol Just prints whatever it sends out
     private  boolean printProtocol = false;
     // Debugging flag to print out as it's loading a file
@@ -69,72 +77,89 @@ public class Assignment_2_Client {
         loadTXTFile(filePath);
 
         // Get IP for thread and port set up
-        InetAddress ia;
+        InetAddress iP;
         try {
-            ia = InetAddress.getByName(hostname);
+            iP = InetAddress.getByName(hostname);
         } catch (UnknownHostException e) {
             System.err.println("Unknown name for IP");
             return;
         }
 
-        // Start listening for connections
-        try {
 
-            // Connect and set up input and output buffers
-            Socket sock = new Socket(ia, port);
-            PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
-            BufferedReader read = new BufferedReader(new InputStreamReader(sock.getInputStream()));
+        int connectionTries = 0;
+        while (connectionRetries > connectionTries) {
+            // Start listening for connections
+            try {
 
-            // Send a list of instructions
-            for (Instruction<String, String, String> i : outPuts.getOutputs()) {
+                // Connect and set up input and output buffers and timeouts
+                Socket sock = new Socket();
+                sock.connect(new InetSocketAddress(iP, port), timeOut);
+                sock.setSoTimeout(timeOut);
+                PrintWriter writer = new PrintWriter(sock.getOutputStream(), true);
+                BufferedReader read = new BufferedReader(new InputStreamReader(sock.getInputStream()));
 
-                // Send an instruction and wait for a reply
-                String line = "007 ERR";
-                String out = convertInstruction(i);
-                writer.println(out);
+                // Send a list of instructions
+                for (Instruction<String, String, String> i : outPuts.getOutputs()) {
 
-                // Print the line if debugging is enabled
-                if (printProtocol) System.out.println("SENT --> " + out);
+                    // Send an instruction and wait for a reply
+                    String line = "007 ERR";
+                    String out = convertInstruction(i);
+                    writer.println(out);
 
-                // Read in a line and check checkSum
-                line = read.readLine();
-                try{
+                    // Print the line if debugging is enabled
+                    if (printProtocol) System.out.println("SENT --> " + out);
 
-                    String[] inPut = line.split(" ", 4);
-                    int checkSum = Integer.parseInt(inPut[0]);
-                    if (line.length() != checkSum) {
-                        throw new Exception("ERR Invalid checkSum: " + inPut[0] + " != " + checkSum);
+                    // Read in a line and check checkSum
+                    line = read.readLine();
+                    try {
+
+                        String[] inPut = line.split(" ", 4);
+                        int checkSum = Integer.parseInt(inPut[0]);
+                        if (line.length() != checkSum) {
+                            throw new Exception("ERR Invalid checkSum: " + inPut[0] + " != " + checkSum);
+                        }
+                        if (checkSum > 999) {
+                            throw new Exception("ERR String too long: " + inPut[0] + " != " + checkSum);
+                        }
+
+                    } catch (Exception e) {
+                        System.out.println("CheckSum: " + " ERROR: " + e.toString());
+                        continue;
                     }
-                    if (checkSum > 999) {
-                        throw new Exception("ERR String too long: " + inPut[0] + " != " + checkSum);
+
+                    // Format the output line for console printing
+                    if (line.length() > 4) {
+                        line = line.substring(4);
                     }
+                    String output = i.command() + " " + i.key() + " " + i.value();
+                    while (output.endsWith(" ")) {
+                        output = output.substring(0, output.length() - 1);
+                    }
+                    System.out.println(output + ": " + line);
 
                 }
-                catch(Exception e) {
-                    System.out.println("CheckSum: " + " ERROR: " + e.toString());
-                    continue;
+
+                // Close connection and break
+                writer.println("CLOSE");
+                sock.close();
+                break;
+
+            // Time out and connection error catch block
+            }catch(ConnectException | SocketTimeoutException e  ){
+                connectionTries++;
+                System.err.println("Connection/Timeout ERROR : " + e
+                                    + " > Retry in " + timeOut/1000 + " seconds > Attempt:"
+                                    + connectionTries + " out of " + connectionRetries);
+                try { Thread.sleep(3000); } catch (InterruptedException ex){
+                    System.err.println("Interrupted while waiting for socket connection");
                 }
 
-                // Format the output line for console printing
-                if (line.length() > 4) {
-                    line = line.substring(4);
-                }
-                String output = i.command() + " " + i.key() + " " + i.value();
-                while (output.endsWith(" ")) {
-                    output = output.substring(0, output.length() - 1);
-                }
-                System.out.println(output + ": " + line);
-
+            // General IO connection block
+            }catch(IOException e){
+                System.err.println("IO Exception: " + e);
+                connectionTries++;
             }
-
-            // Close connection
-            writer.println("CLOSE");
-            sock.close();
-
-        } catch (IOException e) {
-            System.err.println("IO Exception: " + e);
         }
-
     }
 
     /**
@@ -147,11 +172,12 @@ public class Assignment_2_Client {
 
         // Make a new instruction list or reset the old one
         outPuts = new InstructionStorage();
-        System.out.println("**************************** Loading TXT file: " + filePath + " ***************************");
+        if(printFileLoad)System.out.println("--> Loading TXT file: " + filePath );
+        int lineCount = 0, successfulLines = 0, errorCount = 0;
+        String line;
 
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            int lineCount = 0;
+
             while ((line = br.readLine()) != null) {
                 String[] input = line.split(" ",3);
                 lineCount++;
@@ -168,18 +194,21 @@ public class Assignment_2_Client {
                             Objects.equals(instruction, "GET") )) {
                         System.out.println("******** INVALID INSTRUCTION *********");
                         System.out.println("Line: " + lineCount + " Instruction " + instruction + " Must only be GET/READ/PUT");
+                        errorCount++;
                         continue;
                     }
 
-                    // Make sure value it not too long as 999 is the limit
+                    // Make sure value it not too long as 999 is the limit anf ignore if it is
                     if (value.length() > 999 ){
                         System.out.println("*********** INVALID VALUE ************");
                         System.out.println("Line: " + lineCount + " Value longer than 999 characters");
+                        errorCount++;
                         continue;
                     }
 
-                    // Add it to the output list and print a Line for debugging
+                    // Add it to the output list and print Line if debug enabled debugging
                     outPuts.add(instruction, key, value);
+                    successfulLines ++;
 
                     // Print The processed line from the list for debugging
                     if(printFileLoad) {
@@ -195,6 +224,7 @@ public class Assignment_2_Client {
                     // If anything else fails, jump out and move to the next line
                     System.out.println("******** INVALID INPUT FORMAT ********");
                     System.out.println("Line: " + lineCount + " IGNORED");
+                    errorCount++;
                 }
             }
 
@@ -205,19 +235,21 @@ public class Assignment_2_Client {
         }
 
         // Bottom line to encapsulate the file load debugging
-        if (printFileLoad) {
-            System.out.println("****************************  Loaded TXT file: " + filePath + " *************************** ");
-        }
+        if (printFileLoad) System.out.println("--> Loaded TXT file: " + filePath
+                                                + " Lines loaded: " + successfulLines +" successfully"
+                                                + " Errors: " + errorCount +" lines skipped"
+                                                + " Total file lines = " + lineCount);
+
     }
 
     //************************* Instruction storage/Retrieval and storage *************************
     /**
-     * An object class for list input
-     * This is so I can check the file, load it and forget it knowing it's all valid
-     * Just makes the Conversions and passing them around easier as its one object
-     * this is a little unnecessary, but I also wanted to play with it a little more
+     * A class for handling list input operations
+     * Separates issues between loading txt files, and Sending/Generating instructions
+     * Simplifies conversion processes and data instruction passing
      */
     private class InstructionStorage {
+
         // Store a list of Instruction objects
         private List<Instruction<String, String, String>> outputs = new ArrayList<>();
 
@@ -270,7 +302,6 @@ public class Assignment_2_Client {
             output = output.substring(0, output.length() - 1);
         }
         return String.format("%03d" , output.length() + 3) + output ;
-
     }
 
 }

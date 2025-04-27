@@ -11,11 +11,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class Assignment_2_Server_1 {
 
+    /**
+     * Main called used to start the server
+     * Takes in one string argument with the port number
+     * @param args - The port number you want this instance of server to listen on
+     */
     public static void main(String[] args) {
         Assignment_2_Server_1 client = new Assignment_2_Server_1();
         client.runServer(args);
     }
-
 
     // Set time out and retry count for socket timeouts and retries respectively
     private static final int timeOut = 10000;
@@ -23,10 +27,9 @@ public class Assignment_2_Server_1 {
     private static final int tupleStatsPrintTime = 10000;
 
     // A list of connected threads
-    private static List<Thread> clientConnections = new ArrayList<>();
+    private List<Thread> clientConnections = new ArrayList<>();
 
-    // Hash map and semaphore for tuple space storage and editing
-    // One tuple space shared
+    // Hash map and semaphore for tuple space storage and editing all shared between instances
     private static HashMap<String, String> tupleSpace = new HashMap<>();
     private static Semaphore tupleLock = new Semaphore(1);
 
@@ -34,11 +37,12 @@ public class Assignment_2_Server_1 {
     private static boolean printProticol = false;   // Print out the protocol as it's being sent
     private static boolean timeOutsMsg = false;     // Prints out the time-out messages
 
-    // separate stats per server instance
+    // Separate stats per server instance there are edited with in the semaphore
     private int operations = 0;
     private int reads = 0;
     private int gets = 0;
     private int puts = 0;
+
     // Other general stats that can be incremented and decremented whenever necessary
     private AtomicInteger errors = new AtomicInteger(0);
     private AtomicInteger currentClients = new AtomicInteger(0);
@@ -85,7 +89,6 @@ public class Assignment_2_Server_1 {
 
         // Initial connection block with time out just in case a connection fails
         while (true) {
-
             try {
 
                 // Set up the server instance and listen on port
@@ -94,6 +97,7 @@ public class Assignment_2_Server_1 {
 
                 // While communicating
                 while (true) {
+
                     System.out.println("Main Server -> Listening on port " + port);
                     try {
 
@@ -112,16 +116,13 @@ public class Assignment_2_Server_1 {
                     } catch (IOException e) {
                         if (timeOutsMsg) System.out.println("Main Server -> IO exception: "+ e.getMessage());
                     }
-
                 }
 
             // Catch for ALL OTHER FAILURES
             } catch (IOException e) {
                 System.err.println("Main Server -> general socket failure" + e.getMessage() + " Retry on port: " + port);
             }
-
         }
-
     }
 
     /**
@@ -163,7 +164,6 @@ public class Assignment_2_Server_1 {
 
         // Try and acquire to make sure the tuple space is not being edited at the time
         try {
-
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
 
                 // Generate the average sizes,
@@ -199,15 +199,15 @@ public class Assignment_2_Server_1 {
                 System.out.println("PUTs: " + puts );
                 System.out.println("Errors: " + errors.get());
 
-                // release lock
+                // Release lock
                 tupleLock.release();
             }
 
+        // Catch block for semaphore timeout
         } catch (Exception e) {
             System.out.println("Server tuple TIMEOUT " + e.toString());
             errors.incrementAndGet();
         }
-
     }
 
     /**
@@ -215,6 +215,7 @@ public class Assignment_2_Server_1 {
      * This thread is passed the socked of the communication then terminates when the socket is closed or faults
      */
     public class clientConnection extends Thread {
+
         private String id;
         private Socket clientConnect;
 
@@ -279,7 +280,6 @@ public class Assignment_2_Server_1 {
                                 if (checkSum > 999) {
                                     throw new Exception("ERR String too long: " + inPut[0] + " != " + checkSum);
                                 }
-
                             }
 
                             catch(Exception e) {
@@ -298,9 +298,11 @@ public class Assignment_2_Server_1 {
                                     returnString = tupleSpacePUT(inPut[2],inPut[3]);
                                 }
                             }
+
                             if (Objects.equals("R" , inPut[1])) {
                                 returnString = tupleSpaceREAD(inPut[2]);
                             }
+
                             if (Objects.equals("G" , inPut[1])) {
                                 returnString = tupleSpaceGET(inPut[2]);
                             }
@@ -323,16 +325,15 @@ public class Assignment_2_Server_1 {
                         threadRetries++;
                         errors.incrementAndGet();
                     }
-
                 }
 
-                // kill writer, reader and close connection
+                // Kill writer, reader and close connection
                 write.close();
                 read.close();
                 clientConnect.close();
                 System.out.println(id + "CLOSED");
-
             }
+
             // Catch socket IO errors
             catch (IOException e) {
                 System.out.println(id + "IO exception: " + e.toString());
@@ -341,25 +342,23 @@ public class Assignment_2_Server_1 {
             }finally {
                 currentClients.decrementAndGet();
             }
-
         }
-
     } // **** Thread end ****
 
     /**
      * This method is to put a tuple into the tuple space
-     * @param k key of the value your wanting to add to the tuple space
+     * @param k key of the value you're wanting to add to the tuple space
      * @param v the value that goes with that key
      * @return the formatted return string with the result of the function ERR if duplicate
      */
     private String tupleSpacePUT(String k , String v ){
+
+        // Set default string
         String out = "ERR " + k + " already exists";
 
         // Try and acquire a lock The check if k exists.
         try {
-
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
-
                 operations++;
                 puts++;
                 if (!tupleSpace.containsKey(k)) {
@@ -379,7 +378,6 @@ public class Assignment_2_Server_1 {
         }
 
         return out;
-
     }
 
     /**
@@ -394,7 +392,6 @@ public class Assignment_2_Server_1 {
 
         // Try and acquire a lock The check if k exists. if exists return value
         try {
-
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
                 operations++;
                 gets++;
@@ -429,7 +426,6 @@ public class Assignment_2_Server_1 {
 
         // Try and acquire a lock The check if k exists. if exists return value
         try {
-
             if (tupleLock.tryAcquire(1, 20, TimeUnit.SECONDS)) {
                 operations++;
                 reads++;
@@ -450,7 +446,5 @@ public class Assignment_2_Server_1 {
 
         return out;
     }
-
-
 
 }
